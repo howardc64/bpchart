@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blood Pressure Chart</title>
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; background: #faf8f4; }
+  .wrapper { max-width: 980px; margin: 0 auto; padding: 28px 24px 24px; }
+  .chart-box { position: relative; width: 100%; height: 500px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 20px;
+    margin-top: 14px; font-size: 12px; color: #555;
+    justify-content: center; align-items: center;
+  }
+  .leg-item { display: flex; align-items: center; gap: 5px; }
+  .sw-line { display:inline-block; width:28px; height:3px; border-radius:2px; }
+  .sw-dot  { display:inline-block; width:10px; height:10px; border-radius:50%; }
+  .sw-dash { display:inline-block; width:0; height:14px; border-left:2px dashed #888; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="chart-box">
+    <canvas id="bpChart"
+      role="img"
+      aria-label="Blood pressure scatter chart with systolic and diastolic trends and medication annotations">
+    </canvas>
+  </div>
+  <div class="legend">
+    <span class="leg-item"><span class="sw-line" style="background:#b53030;"></span> Systolic trend</span>
+    <span class="leg-item"><span class="sw-dot"  style="background:rgba(200,80,80,0.5);"></span> Systolic reading</span>
+    <span class="leg-item"><span class="sw-line" style="background:#2a6fa8;"></span> Diastolic trend</span>
+    <span class="leg-item"><span class="sw-dot"  style="background:rgba(60,130,200,0.45);"></span> Diastolic reading</span>
+    <span class="leg-item"><span class="sw-dash"></span> Medication change</span>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const RAW   = [[1754784000000, 142, 91], [1754870400000, 133, 90], [1755302400000, 141, 88], [1755388800000, 139, 96], [1755561600000, 141, 85], [1755648000000, 144, 94], [1755734400000, 140, 91], [1755907200000, 129, 84], [1755907200000, 128, 83], [1755993600000, 152, 93], [1755993600000, 130, 86], [1756080000000, 132, 84], [1756166400000, 133, 88], [1756598400000, 124, 84], [1756684800000, 131, 87], [1756857600000, 119, 83], [1756857600000, 128, 88], [1756944000000, 124, 86], [1756944000000, 123, 86], [1757030400000, 124, 83], [1757635200000, 111, 83], [1757635200000, 107, 70], [1757721600000, 120, 77], [1757721600000, 108, 74], [1757808000000, 111, 74], [1757808000000, 114, 75], [1757894400000, 116, 77], [1757894400000, 113, 73], [1757980800000, 108, 74], [1757980800000, 100, 63], [1758067200000, 120, 81], [1758067200000, 110, 69], [1758153600000, 118, 79], [1758240000000, 119, 76], [1758326400000, 118, 76], [1758326400000, 113, 76], [1759190400000, 123, 83], [1759190400000, 117, 79], [1759276800000, 113, 76], [1759276800000, 129, 81], [1759363200000, 127, 81], [1759363200000, 112, 76], [1759363200000, 112, 75], [1759449600000, 127, 83], [1759449600000, 118, 81], [1759449600000, 123, 77], [1759622400000, 109, 74], [1759622400000, 109, 70], [1759622400000, 111, 73], [1759622400000, 108, 78], [1759708800000, 121, 78], [1759708800000, 122, 82], [1759708800000, 121, 84], [1759708800000, 118, 79], [1759795200000, 128, 78], [1759795200000, 132, 84], [1759795200000, 122, 76], [1759795200000, 120, 75], [1759881600000, 129, 81], [1759881600000, 113, 73], [1759968000000, 127, 90], [1759968000000, 128, 84], [1759968000000, 135, 86], [1759968000000, 112, 77], [1759968000000, 129, 82], [1759968000000, 116, 73], [1760054400000, 121, 86], [1760054400000, 133, 84], [1760054400000, 106, 78], [1760140800000, 117, 77], [1760140800000, 121, 76], [1760140800000, 103, 70], [1760313600000, 115, 74], [1760313600000, 116, 71], [1760400000000, 120, 74], [1760400000000, 104, 69], [1760486400000, 112, 73], [1760486400000, 117, 69], [1760572800000, 117, 74], [1760659200000, 128, 86], [1760745600000, 118, 79], [1760832000000, 115, 81], [1760832000000, 118, 73], [1760918400000, 114, 72], [1761004800000, 121, 81], [1761004800000, 114, 74], [1761177600000, 135, 88], [1761350400000, 109, 70], [1761350400000, 111, 70], [1761609600000, 106, 66], [1761782400000, 110, 71], [1761868800000, 114, 76], [1762128000000, 118, 75], [1763078400000, 125, 75], [1763424000000, 111, 74], [1763424000000, 113, 76], [1763510400000, 111, 73], [1763510400000, 124, 82], [1763596800000, 114, 72], [1763769600000, 116, 76], [1763769600000, 129, 83], [1763942400000, 111, 76], [1763942400000, 131, 87], [1764374400000, 119, 77], [1764460800000, 124, 84], [1764547200000, 122, 79], [1764633600000, 113, 70], [1764806400000, 115, 78], [1764892800000, 110, 70], [1765065600000, 130, 81], [1765152000000, 120, 76], [1765238400000, 112, 81], [1766016000000, 125, 86], [1766016000000, 134, 88], [1766188800000, 113, 77], [1766275200000, 121, 84], [1766793600000, 135, 92], [1766880000000, 119, 84], [1766880000000, 128, 86], [1767398400000, 122, 80], [1767484800000, 121, 82], [1767657600000, 116, 79], [1768176000000, 107, 68], [1768521600000, 122, 79], [1768953600000, 131, 82], [1768953600000, 131, 87], [1769212800000, 120, 78], [1769990400000, 124, 84], [1770076800000, 121, 84], [1770076800000, 128, 81], [1770163200000, 138, 94], [1770336000000, 134, 86], [1770336000000, 131, 87], [1770422400000, 135, 85], [1770595200000, 131, 85], [1770681600000, 122, 86], [1770854400000, 132, 85], [1770940800000, 131, 80], [1771027200000, 124, 84], [1771113600000, 136, 90], [1771200000000, 141, 99], [1771286400000, 121, 81], [1771372800000, 144, 95], [1771804800000, 121, 80], [1771804800000, 124, 79], [1771891200000, 126, 78], [1771977600000, 133, 88], [1772150400000, 141, 92], [1772236800000, 138, 88], [1772409600000, 131, 90], [1772496000000, 124, 81], [1774742400000, 133, 91], [1774742400000, 133, 87], [1774915200000, 136, 88], [1774915200000, 126, 89], [1775001600000, 156, 103], [1775088000000, 143, 92], [1775088000000, 146, 93], [1775088000000, 142, 94], [1775174400000, 142, 86], [1775260800000, 133, 89], [1775433600000, 143, 94], [1775433600000, 137, 90], [1775520000000, 139, 93], [1775520000000, 139, 93], [1775606400000, 122, 75], [1775692800000, 120, 83], [1775952000000, 119, 78], [1776902400000, 129, 85], [1777420800000, 119, 75], [1777593600000, 121, 84]];
+const MEDS  = [{"start": 1754784000000, "end": 1759276800000, "label": "Lisinopril-HCTZ 10-12.5mg 1/2tab"}, {"start": 1759363200000, "end": 1768867200000, "label": "Lisinopril 5mg"}, {"start": 1768867200000, "end": 1775520000000, "label": "Losartan 25mg"}, {"start": 1775606400000, "end": 1778964186494, "label": "Losartan 50mg"}];
+const MIN_X = 1754555904000;
+const MAX_X = 1779420378494;
+
+// ── LOESS smoother ────────────────────────────────────────────────────────
+function loess(xs, ys, bw) {
+  return xs.map(x0 => {
+    let sw=0, swx=0, swy=0, swxx=0, swxy=0;
+    xs.forEach((x, j) => {
+      const w = Math.exp(-0.5 * ((x - x0) / bw) ** 2);
+      sw+=w; swx+=w*x; swy+=w*ys[j]; swxx+=w*x*x; swxy+=w*x*ys[j];
+    });
+    const det = sw*swxx - swx*swx;
+    if (Math.abs(det) < 1e-10) return swy / sw;
+    return ((swxx*swy - swx*swxy) + (sw*swxy - swx*swy)*x0) / det;
+  });
+}
+
+const xs = RAW.map(r => r[0]);
+const bw = (xs[xs.length-1] - xs[0]) * 0.09;
+const sysTrend = loess(xs, RAW.map(r=>r[1]), bw);
+const diaTrend = loess(xs, RAW.map(r=>r[2]), bw);
+const medBounds = MEDS.slice(1).map(m => m.start);
+
+// ── Word-wrap: splits label string into lines fitting maxWidth px ─────────
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (cur && ctx.measureText(test).width > maxWidth) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// ── Plugin: dashed lines + above-x-axis medication labels ─────────────────
+const medPlugin = {
+  id: 'medPlugin',
+  afterDraw(chart) {
+    const {ctx, chartArea, scales: {x}} = chart;
+    ctx.save();
+
+    // Dashed vertical lines at each medication boundary
+    medBounds.forEach(t => {
+      const px = x.getPixelForValue(t);
+      if (px < chartArea.left || px > chartArea.right) return;
+      ctx.beginPath();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = 'rgba(100,100,100,0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(px, chartArea.top);
+      ctx.lineTo(px, chartArea.bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Medication labels: top-anchored just inside top of chart, word-wrapped
+    const fontSize = 10.5;
+    const lineH    = fontSize + 3;
+    const pad      = 4;
+    const maxRows  = 2;
+    const labelTop = chartArea.top + pad;
+
+    ctx.font = `${fontSize}px Arial, sans-serif`;
+    ctx.fillStyle = '#333';
+    ctx.textBaseline = 'top';
+
+    MEDS.forEach(m => {
+      const x1      = Math.max(x.getPixelForValue(m.start), chartArea.left);
+      const x2      = Math.min(x.getPixelForValue(m.end),   chartArea.right);
+      const regionW = x2 - x1 - pad * 2;
+      if (regionW < 10) return;
+
+      // Wrap label into lines that fit the region; clamp to maxRows
+      let lines = wrapText(ctx, m.label, regionW);
+      if (lines.length > maxRows) lines = lines.slice(0, maxRows);
+
+      // Clip to region and draw top-down from top of chart
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x1, chartArea.top, x2 - x1, chartArea.bottom - chartArea.top);
+      ctx.clip();
+      lines.forEach((line, i) => {
+        ctx.fillText(line, x1 + pad, labelTop + i * lineH);
+      });
+      ctx.restore();
+    });
+
+    ctx.restore();
+  }
+};
+Chart.register(medPlugin);
+
+// ── Chart ─────────────────────────────────────────────────────────────────
+new Chart(document.getElementById('bpChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Systolic reading',
+        data: RAW.map(r => ({x: r[0], y: r[1]})),
+        backgroundColor: 'rgba(200,80,80,0.4)',
+        pointRadius: 4.5, showLine: false, order: 2
+      },
+      {
+        label: 'Systolic trend',
+        data: RAW.map((r,i) => ({x: r[0], y: sysTrend[i]})),
+        borderColor: '#b53030', borderWidth: 2.5,
+        backgroundColor: 'transparent', pointRadius: 0,
+        showLine: true, tension: 0.4, order: 1
+      },
+      {
+        label: 'Diastolic reading',
+        data: RAW.map(r => ({x: r[0], y: r[2]})),
+        backgroundColor: 'rgba(60,130,200,0.38)',
+        pointRadius: 4.5, showLine: false, order: 2
+      },
+      {
+        label: 'Diastolic trend',
+        data: RAW.map((r,i) => ({x: r[0], y: diaTrend[i]})),
+        borderColor: '#2a6fa8', borderWidth: 2.5,
+        backgroundColor: 'transparent', pointRadius: 0,
+        showLine: true, tension: 0.4, order: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: {display: false},
+      tooltip: {
+        filter: item => !item.dataset.label.includes('trend'),
+        callbacks: {
+          title: items => new Date(items[0].parsed.x).toLocaleDateString('en-US',
+            {month:'short', day:'numeric', year:'2-digit'}),
+          label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y)
+        }
+      }
+    },
+    scales: {
+      x: {
+        type: 'linear', min: MIN_X, max: MAX_X,
+        ticks: {
+          color: '#666', font: {size: 11},
+          maxRotation: 0, maxTicksLimit: 9,
+          callback: val => new Date(val).toLocaleDateString('en-US',
+            {month:'short', day:'numeric', year:'2-digit'})
+        },
+        grid: {color: 'rgba(0,0,0,0.15)', lineWidth: 1},
+        border: {display: false}
+      },
+      y: {
+        min: 55, max: 170,
+        ticks: {color: '#666', font: {size: 11}, stepSize: 10},
+        grid: {color: 'rgba(0,0,0,0.15)', lineWidth: 1},
+        border: {display: false},
+        title: {display: true, text: 'mmHg', color: '#666', font: {size: 12}}
+      }
+    },
+    layout: {padding: {top: 10, bottom: 10, left: 0, right: 10}}
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+== Task
+
+Build python script with bp csv and medication text input and make chart in html output
+
+== Input
+
+bpdata.csv
+BP meds text file (medication list with date intervals)
+
+== output
+
+Python script
+
+== chart display
+
+Graph bpdata
+Display samples
+No lines between samples
+Draw smooth curve averaging the samples
+Draw vertical line when medications change
+Label medication horizontally on top of chart. Make sure all medications are included.
+Wrap medication label text as necessary to stay within its region
+If medication label is cut off, extend the dates to avoid being cut off
+Make gridlines clearly visible
+
+== Result
+
+Build python script 
+
+== reference
+
+Prior generated python script
+Follow chart style using html reference
